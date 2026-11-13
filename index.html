@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Wallet</title>
+    <!-- Библиотека для мгновенного распознавания QR-кодов из камеры -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        .done-btn {
+            font-size: 17px;
+            font-weight: 600;
+            color: #0a84ff;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .more-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(118, 118, 128, 0.28);
+            border: none;
+            color: #0a84ff;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .card-container {
+            padding: 18px 24px;
+        }
+
+        .apple-card {
+            width: 100%;
+            aspect-ratio: 1.58;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .card-chip {
+            width: 36px;
+            height: 28px;
+            background: linear-gradient(135deg, #e6c687 0%, #b89753 100%);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-chip::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 2px;
+        }
+
+        .card-balance-block {
+            margin-top: auto;
+        }
+
+        .card-label {
+            font-size: 12px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .card-balance {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 10px;
+        }
+
+        .card-holder {
+            font-size: 15px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-logo {
+            font-size: 18px;
+            font-weight: 800;
+            font-style: italic;
+            letter-spacing: -1px;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+
+        .action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .action-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #1c1c1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #0a84ff;
+            transition: background 0.2s;
+        }
+
+        .action-item:active .action-icon {
+            background: #2c2c2e;
+        }
+
+        .action-text {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .transactions-section {
+            flex: 1;
+            background: #1c1c1e;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #8e8e93;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .tx-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tx-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tx-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tx-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .tx-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .tx-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .tx-date {
+            font-size: 12px;
+            color: #8e8e93;
+        }
+
+        .tx-sum {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .nav-bar {
+            height: 50px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 0.5px solid rgba(255,255,255,0.1);
+            background: #000;
+        }
+
+        .nav-item {
+            background: none;
+            border: none;
+            color: #8e8e93;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #0a84ff;
+        }
+
+        .nav-item span {
+            font-size: 18px;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background: #1c1c1e;
+            width: 100%;
+            max-width: 340px;
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            border-radius: 10px;
+            padding: 12px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn.cancel {
+            background: #2c2c2e;
+            color: #0a84ff;
+        }
+
+        .modal-btn.confirm {
+            background: #0a84ff;
+            color: #fff;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(10, 132, 255, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(10, 132, 255, 0); }
+        }
+
+        .nfc-label {
+            font-size: 19px;
+            font-weight: 500;
+            color: #fff;
+            text-align: center;
+        }
+
+        .nfc-sublabel {
+            font-size: 13px;
+            color: #8e8e93;
+            text-align: center;
+            max-width: 280px;
+        }
+
+        .sber-direct-btn {
+            margin-top: 4px;
+            padding: 18px 18px;
+            border-radius: 20px;
+            border: 1px solid #30d158;
+            color: #30d158;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(48, 209, 88, 0.18);
+        }
+
+        .sber-direct-btn:hover {
+            background: rgba(48, 209, 88, 0.3);
+        }
+
+        .sber-direct-btn.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .sber-direct-btn:active {
+            transform: scale(0.98);
+        }
+
+        .sber-direct-btn svg {
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .sber-animation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin: 10px 0;
+        }
+
+        .sber-phone-graphic {
+            width: 70px;
+            height: 130px;
+            border: 3px solid #30d158;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(48, 209, 88, 0.05);
+            animation: phonePulse 2s infinite ease-in-out;
+        }
+
+        .sber-terminal-graphic {
+            width: 50px;
+            height: 35px;
+            background: #2c2c2e;
+            border: 2px solid #8e8e93;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #8e8e93;
+        }
+
+        @keyframes phonePulse {
+            0%, 100% { transform: translateY(0); box-shadow: 0 0 10px rgba(48, 209, 88, 0.2); }
+            50% { transform: translateY(-6px); box-shadow: 0 0 20px rgba(48, 209, 88, 0.5); }
+        }
+
+        .sber-wave-animation {
+            width: 40px;
+            height: 20px;
+            border-top: 2px solid #30d158;
+            border-radius: 50%;
+            animation: waveFlow 1.2s infinite linear;
+        }
+
+        @keyframes waveFlow {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+
+        .sber-error-text {
+            color: #ff453a;
+            font-size: 12px;
+            text-align: center;
+            margin-top: -8px;
+            display: none;
+        }
+
+        /* Темы скинов */
+        .skin-amex-black {
+            background: linear-gradient(135deg, #111111 0%, #2b2b2b 100%);
+            border: 1px solid #3a3a3c;
+            color: #e5e5e7;
+        }
+
+        .skin-silver {
+            background: linear-gradient(135deg, #f5f5f7 0%, #e1e1e6 100%);
+            border: 1px solid #ffffff;
+            color: #1d1d1f;
+        }
+
+        .skin-silver .card-chip {
+            background: linear-gradient(135deg, #333333 0%, #111111 100%);
+        }
+
+        .skin-paint-splash {
+            background: radial-gradient(circle at 75% 65%, #ff2d55 0%, #30d158 38%, #0a84ff 52%, #ff9f0a 68%, #bf5af2 82%, #111 100%);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: #fff;
+        }
+
+        .skin-amex-silver {
+            background: linear-gradient(135deg, #999999 0%, #555555 100%);
+            border: 1px solid #cccccc;
+            color: #ffffff;
+        }
+
+        .skin-gold-luxury {
+            background: linear-gradient(135deg, #231f20 0%, #141113 100%);
+            border: 1px solid #d4af37;
+            color: #f3e5ab;
+        }
+        .skin-gold-luxury .card-chip {
+            background: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
+        }
+
+        /* Топовая панель */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        .done-btn {
+            font-size: 17px;
+            font-weight: 600;
+            color: #0a84ff;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .more-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(118, 118, 128, 0.28);
+            border: none;
+            color: #0a84ff;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .card-container {
+            padding: 18px 24px;
+        }
+
+        .apple-card {
+            width: 100%;
+            aspect-ratio: 1.58;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .card-chip {
+            width: 36px;
+            height: 28px;
+            background: linear-gradient(135deg, #e6c687 0%, #b89753 100%);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-chip::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 2px;
+        }
+
+        .card-balance-block {
+            margin-top: auto;
+        }
+
+        .card-label {
+            font-size: 12px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .card-balance {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 10px;
+        }
+
+        .card-holder {
+            font-size: 15px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-logo {
+            font-size: 18px;
+            font-weight: 800;
+            font-style: italic;
+            letter-spacing: -1px;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+
+        .action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .action-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #1c1c1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #0a84ff;
+            transition: background 0.2s;
+        }
+
+        .action-item:active .action-icon {
+            background: #2c2c2e;
+        }
+
+        .action-text {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .transactions-section {
+            flex: 1;
+            background: #1c1c1e;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #8e8e93;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .tx-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tx-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tx-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tx-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .tx-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .tx-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .tx-date {
+            font-size: 12px;
+            color: #8e8e93;
+        }
+
+        .tx-sum {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .nav-bar {
+            height: 50px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 0.5px solid rgba(255,255,255,0.1);
+            background: #000;
+        }
+
+        .nav-item {
+            background: none;
+            border: none;
+            color: #8e8e93;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #0a84ff;
+        }
+
+        .nav-item span {
+            font-size: 18px;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background: #1c1c1e;
+            width: 100%;
+            max-width: 340px;
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            border-radius: 10px;
+            padding: 12px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn.cancel {
+            background: #2c2c2e;
+            color: #0a84ff;
+        }
+
+        .modal-btn.confirm {
+            background: #0a84ff;
+            color: #fff;
+        }
+
+        .scanner-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 18px 20px;
+        }
+
+        .camera-ring {
+            width: 150px;
+            height: 150px;
+            border-radius: 34px;
+            border: 3px solid #0a84ff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(10, 132, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .camera-ring.active {
+            animation: pulseRing 1.5s infinite ease-in-out;
+        }
+
+        .camera-ring video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ring-icon {
+            font-size: 42px;
+            color: #0a84ff;
+            z-index: 2;
+        }
+
+        .camera-ring.active-cam .ring-icon {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <button class="done-btn">Готово</button>
+        <button class="more-btn" onclick="toggleOpenSettings()">···</button>
+    </div>
+
+    <div class="card-container">
+        <div class="apple-card skin-amex-black" id="appCard">
+            <div class="card-top">
+                <span class="card-title" id="cardTitleDisplay">SberKids</span>
+                <div class="card-chip"></div>
+            </div>
+            <div class="card-balance-block">
+                <div class="card-label">Баланс карты</div>
+                <div class="card-balance" id="balanceDisplay">14 850 ₽</div>
+            </div>
+            <div class="card-footer">
+                <span class="card-holder" id="holderDisplay">SOFIYA IVANOVA</span>
+                <span class="card-logo">sber</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="action-item" onclick="openNfcModal()">
+            <div class="action-icon">📶</div>
+            <span class="action-text">Оплатить</span>
+        </button>
+        <button class="action-item" onclick="openTopUpModal()">
+            <div class="action-icon">➕</div>
+            <span class="action-text">Пополнить</span>
+        </button>
+        <button class="action-item" onclick="openScannerModal()">
+            <div class="action-icon">📷</div>
+            <span class="action-text">Сканировать</span>
+        </button>
+    </div>
+
+    <div class="transactions-section">
+        <div class="section-title">История операций</div>
+        <div class="tx-list" id="txList">
+            <div class="tx-item">
+                <div class="tx-left">
+                    <div class="tx-icon">🍔</div>
+                    <div class="tx-info">
+                        <span class="tx-name">Вкусно и Точка</span>
+                        <span class="tx-date">Сегодня, 14:20</span>
+                    </div>
+                </div>
+                <span class="tx-sum" style="color: #ff453a;">-450 ₽</span>
+            </div>
+            <div class="tx-item">
+                <div class="tx-left">
+                    <div class="tx-icon">🎁</div>
+                    <div class="tx-info">
+                        <span class="tx-name">Перевод от мамы</span>
+                        <span class="tx-date">Вчера, 18:00</span>
+                    </div>
+                </div>
+                <span class="tx-sum" style="color: #30d158;">+2 000 ₽</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <button class="nav-item active">
+            <span>💳</span>
+            <span>Карты</span>
+        </button>
+        <button class="nav-item" onclick="openNfcModal()">
+            <span>📱</span>
+            <span>Apple Pay</span>
+        </button>
+        <button class="nav-item" onclick="openOpenSettings()">
+            <span>⚙️</span>
+            <span>Настройки</span>
+        </button>
+    </div>
+
+    <!-- Модалка оплаты / NFC -->
+    <div class="modal" id="nfcModal">
+        <div class="modal-card" style="align-items: center; text-align: center;">
+            <div class="modal-title">Поднесите к терминалу</div>
+            
+            <div class="sber-animation-container">
+                <div class="sber-phone-graphic">
+                    <div class="sber-wave-animation"></div>
+                </div>
+                <div class="sber-terminal-graphic">TERMINAL</div>
+            </div>
+
+            <div class="nfc-sublabel">Держите iPhone ближе к считывающему устройству</div>
+
+            <button class="sber-direct-btn" id="sberPayBtn" onclick="triggerSberPay()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+                Запустить SberPay (NFC)
+            </button>
+            <div class="sber-error-text" id="sberErrorText">Не удалось вызвать NFC API. Используйте терминал магазина.</div>
+
+            <div class="modal-buttons" style="width: 100%; margin-top: 10px;">
+                <button class="modal-btn cancel" onclick="closeNfcModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка пополнения -->
+    <div class="modal" id="topUpModal">
+        <div class="modal-card">
+            <div class="modal-title">Пополнение баланса</div>
+            <input type="number" class="modal-input" id="topUpInput" placeholder="Введите сумму (₽)">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeTopUpModal()">Отмена</button>
+                <button class="modal-btn confirm" onclick="confirmTopUp()">Пополнить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка настроек / скинов -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-card" style="max-height: 85vh; overflow-y: auto;">
+            <div class="modal-title">Настройки карты</div>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label class="card-label">Имя владельца</label>
+                <input type="text" class="modal-input" id="inputHolder" value="SOFIYA IVANOVA">
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label class="card-label">Название карты</label>
+                <input type="text" class="modal-input" id="inputCardTitle" value="SberKids">
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label class="card-label">Выберите скин</label>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                    <button class="modal-btn cancel" onclick="setSkin('skin-amex-black')" style="font-size: 13px;">Amex Black</button>
+                    <button class="modal-btn cancel" onclick="setSkin('skin-silver')" style="font-size: 13px;">Silver</button>
+                    <button class="modal-btn cancel" onclick="setSkin('skin-paint-splash')" style="font-size: 13px;">Paint Splash</button>
+                    <button class="modal-btn cancel" onclick="setSkin('skin-amex-silver')" style="font-size: 13px;">Amex Silver</button>
+                    <button class="modal-btn cancel" onclick="setSkin('skin-gold-luxury')" style="font-size: 13px; grid-column: span 2;">Gold Luxury</button>
+                </div>
+            </div>
+
+            <div class="modal-buttons" style="margin-top: 10px;">
+                <button class="modal-btn cancel" onclick="closeOpenSettings()">Закрыть</button>
+                <button class="modal-btn confirm" onclick="saveSettings()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка сканирования QR -->
+    <div class="modal" id="scannerModal">
+        <div class="modal-card" style="align-items: center; text-align: center;">
+            <div class="modal-title">Сканирование QR / Чек</div>
+            
+            <div class="scanner-section">
+                <div class="camera-ring" id="cameraRing" onclick="initCamera()">
+                    <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;" id="ringContent">
+                        <span class="ring-icon">📷</span>
+                    </div>
+                </div>
+                <div class="nfc-sublabel" id="scannerStatus">Нажмите на рамку, чтобы включить камеру и сканировать QR</div>
+            </div>
+
+            <div class="modal-buttons" style="width: 100%;">
+                <button class="modal-btn cancel" onclick="closeScannerModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBalance = 14850;
+
+        function openNfcModal() {
+            document.getElementById('nfcModal').classList.add('active');
+            document.getElementById('sberErrorText').style.display = 'none';
+        }
+        function closeNfcModal() {
+            document.getElementById('nfcModal').classList.remove('active');
+            stopCamera();
+        }
+
+        function openTopUpModal() {
+            document.getElementById('topUpModal').classList.add('active');
+        }
+        function closeTopUpModal() {
+            document.getElementById('topUpModal').classList.remove('active');
+            document.getElementById('topUpInput').value = '';
+        }
+
+        function confirmTopUp() {
+            const val = parseInt(document.getElementById('topUpInput').value);
+            if (!isNaN(val) && val > 0) {
+                currentBalance += val;
+                document.getElementById('balanceDisplay').textContent = currentBalance.toLocaleString('ru-RU') + ' ₽';
+                
+                // Добавим в историю
+                const list = document.getElementById('txList');
+                const item = document.createElement('div');
+                item.className = 'tx-item';
+                item.innerHTML = `
+                    <div class="tx-left">
+                        <div class="tx-icon">➕</div>
+                        <div class="tx-info">
+                            <span class="tx-name">Пополнение баланса</span>
+                            <span class="tx-date">Только что</span>
+                        </div>
+                    </div>
+                    <span class="tx-sum" style="color: #30d158;">+${val.toLocaleString('ru-RU')} ₽</span>
+                `;
+                list.prepend(item);
+            }
+            closeTopUpModal();
+        }
+
+        function openOpenSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+            document.getElementById('inputHolder').value = document.getElementById('holderDisplay').textContent;
+            document.getElementById('inputCardTitle').value = document.getElementById('cardTitleDisplay').textContent;
+        }
+        function closeOpenSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        function toggleOpenSettings() {
+            openOpenSettings();
+        }
+
+        function setSkin(skinClass) {
+            const card = document.getElementById('appCard');
+            card.className = 'apple-card ' + skinClass;
+            localStorage.setItem('savedSkin', skinClass);
+        }
+
+        function saveSettings() {
+            const holder = document.getElementById('inputHolder').value;
+            const title = document.getElementById('inputCardTitle').value;
+            if(holder) document.getElementById('holderDisplay').textContent = holder;
+            if(title) document.getElementById('cardTitleDisplay').textContent = title;
+            closeOpenSettings();
+        }
+
+        function triggerSberPay() {
+            const btn = document.getElementById('sberPayBtn');
+            const err = document.getElementById('sberErrorText');
+            btn.classList.add('loading');
+            btn.textContent = 'Обработка NFC...';
+
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btn.textContent = 'Запустить SberPay (NFC)';
+                err.style.display = 'block';
+                
+                // Пытаемся вызвать перенаправление в приложение сберика если возможно
+                try {
+                    window.location.href = 'sberkidsonline://';
+                } catch(e) {}
+            }, 1500);
+        }
+
+        // Сканер QR
+        let videoStream = null;
+        let scanning = false;
+        let scanTimer = null;
+
+        function openScannerModal() {
+            document.getElementById('scannerModal').classList.add('active');
+        }
+
+        function closeScannerModal() {
+            stopCamera();
+            document.getElementById('scannerModal').classList.remove('active');
+        }
+
+        async function initCamera() {
+            if (scanning) return;
+            const ring = document.getElementById('cameraRing');
+            const status = document.getElementById('scannerStatus');
+            const ringContent = document.getElementById('ringContent');
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                scanning = true;
+                ring.classList.add('active-cam');
+                
+                const video = document.createElement('video');
+                video.srcObject = videoStream;
+                video.setAttribute('playsinline', true);
+                video.play();
+                
+                ringContent.innerHTML = '';
+                ringContent.appendChild(video);
+                status.textContent = 'Наведите камеру на QR-код терминала...';
+
+                const canvasElement = document.createElement('canvas');
+                const canvas = canvasElement.getContext('2d');
+
+                scanTimer = setInterval(() => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvasElement.height = video.videoHeight;
+                        canvasElement.width = video.videoWidth;
+                        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (code) {
+                            status.textContent = 'QR Распознан! Данные: ' + code.data;
+                            stopCamera();
+                        }
+                    }
+                }, 100);
+
+            } catch (err) {
+                status.textContent = 'Ошибка доступа к камере. Проверьте разрешения.';
+                stopCamera();
+            }
+        }
+
+        function stopCamera() {
+            scanning = false;
+            if (scanTimer) clearInterval(scanTimer);
+            if (videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+                videoStream = null;
+            }
+            const ring = document.getElementById('cameraRing');
+            const ringContent = document.getElementById('ringContent');
+            ring.classList.remove('active-cam');
+            ringContent.innerHTML = '<span class="ring-icon">📷</span>';
+            document.getElementById('scannerStatus').textContent = 'Нажмите на рамку, чтобы включить камеру и сканировать QR';
+        }
+
+        // Загрузка сохраненного скина
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('savedSkin');
+            if(saved) {
+                document.getElementById('appCard').className = 'apple-card ' + saved;
+            }
+        });
+    </script>
+</body>
+</html>
