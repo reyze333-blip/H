@@ -1,0 +1,17 @@
+{
+  "background_color": "#ffffff",
+  "dir": "auto",
+  "display": "standalone",
+  "name": "reyze333-blip.github",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "reyze333-blip.github",
+  "start_url": "https://www.pwabuilder.com/reportcard?site=https://reyze333-blip.github.io",
+  "theme_color": "#ffffff",
+  "id": "https://www.pwabuilder.com/reportcard?site=https://reyze333-blip.github.io",
+  "description": "Jdjfjf",
+  "categories": [
+    "beauty",
+    "books"
+  ]
+}
